@@ -1,0 +1,12 @@
+mcp
+llama-index
+transformers
+sentence-transformers
+python-dotenv
+llama-index-embeddings-huggingface
+einops
+quart
+requests
+qdrant-client
+tqdm
+httpx

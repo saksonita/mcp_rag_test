@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Knowledge Base</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .loading {
+            display: none;
+        }
+        .loading.active {
+            display: block;
+        }
+        .result-section {
+            display: none;
+        }
+        .result-section.active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-center mb-8 text-indigo-600">ML Knowledge Base</h1>
+        
+        <!-- Search Form -->
+        <div class="max-w-2xl mx-auto mb-8">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex flex-col space-y-4">
+                    <textarea 
+                        id="query" 
+                        class="w-full p-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        rows="3"
+                        placeholder="Ask your machine learning question here..."
+                    ></textarea>
+                    <button 
+                        onclick="searchQuery()"
+                        class="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                        Search
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="loading text-center mb-8">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-600"></div>
+            <p class="text-gray-600 mt-2">Searching...</p>
+        </div>
+
+        <!-- Results -->
+        <div id="results" class="result-section max-w-4xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- ML FAQ Results -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-semibold mb-4 text-indigo-600">ML FAQ Results</h2>
+                    <div id="faqResults" class="prose">
+                        <!-- FAQ results will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Web Search Results -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-semibold mb-4 text-indigo-600">Web Search Results</h2>
+                    <div id="webResults" class="prose">
+                        <!-- Web results will be inserted here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function searchQuery() {
+            const query = document.getElementById('query').value.trim();
+            if (!query) return;
+
+            // Show loading, hide results
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('results').classList.remove('active');
+
+            fetch('/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query: query })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Hide loading, show results
+                document.getElementById('loading').classList.remove('active');
+                document.getElementById('results').classList.add('active');
+
+                // Format and display results
+                document.getElementById('faqResults').innerHTML = formatResults(data.faq_results);
+                document.getElementById('webResults').innerHTML = formatResults(data.web_results);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('loading').classList.remove('active');
+                alert('An error occurred while searching. Please try again.');
+            });
+        }
+
+        function formatResults(results) {
+            if (!results || results === "No results found") {
+                return '<p class="text-gray-500">No results found</p>';
+            }
+
+            // Add debug output
+            console.log('Raw results:', results);
+
+            // Split by the separator used in the Python code
+            const sections = results.split('\n\n---\n\n');
+            console.log('Sections:', sections);
+            
+            return sections.map(section => {
+                // Add debug output for each section
+                console.log('Processing section:', section);
+                
+                // Check if it's a web result (contains Title: and URL:)
+                if (section.includes('Title:')) {
+                    const lines = section.split('\n');
+                    console.log('Web result lines:', lines);
+                    
+                    const title = lines[0].replace('Title: ', '').trim();
+                    const url = lines[1].replace('URL: ', '').trim();
+                    const snippet = lines[2].replace('Snippet: ', '').trim();
+                    
+                    return `<div class="mb-6 pb-4 border-b">
+                        <h3 class="font-semibold text-lg">${title}</h3>
+                        <a href="${url}" class="text-blue-600 hover:underline text-sm block mt-1" target="_blank">
+                            ${url}
+                        </a>
+                        <p class="mt-2 text-gray-600">${snippet}</p>
+                    </div>`;
+                }
+                // FAQ result
+                return `<div class="mb-6 pb-4 border-b">
+                    <p>${section}</p>
+                </div>`;
+            }).join('');
+        }
+    </script>
+</body>
+</html> 
